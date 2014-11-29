@@ -27,9 +27,12 @@ end
 route :get, :post, '/json.json' do
   if request_json
     stream do |out|
-      prettify_json(request_json).each do |json|
-        out.puts json
-        out.flush
+      begin
+        prettify_json(request_json).each do |json|
+          out.puts json
+        end
+      rescue => e
+        out.puts e.message
       end
     end
   end
