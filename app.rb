@@ -12,38 +12,26 @@ get '/' do
 end
 
 route :get, :post, '/json' do
-  begin
-    locals = {json: request_json}
-    locals[:prettified_jsons] = prettify_json(request_json) if request_json
+  locals = {json: request_json}
+  locals[:out], locals[:err] = prettify_json(request_json) if request_json
 
-    slim :json, locals: locals
-  rescue => e
-    status 400
-    locals[:e] = e
+  status 400 if locals[:err]
 
-    slim :json_error, locals: locals
-  end
+  slim :json, locals: locals
 end
 
 route :get, :post, '/json.json' do
   if request_json
-    tempfile = Tempfile.open(['tmp', '.json'])
+    out, err = prettify_json(request_json)
 
-    error_occured = false
+    status 400 if err
 
-    begin
-      prettify_json(request_json).each do |json|
-        tempfile.puts json
+    stream do |res|
+      out.each do |buf|
+        res.write buf
       end
-    rescue => e
-      tempfile.puts e.message
-      error_occured = true
+      res.write err.message.force_encoding("UTF-8") if err
     end
-
-    status 400 if error_occured
-
-    tempfile.rewind
-    response.write tempfile.read
   end
 end
 
@@ -56,11 +44,20 @@ def request_json
 end
 
 def prettify_json(json)
-  Enumerator.new do |yielder|
+  out = Tempfile.open(['out_', '.json'])
+  err    = nil
+
+  begin
     Yajl::Parser.new.parse(json) do |d|
-      yielder.yield Yajl::Encoder.encode(d, pretty: true)
+      out.puts Yajl::Encoder.encode(d, pretty: true)
     end
+  rescue => e
+    err = e
   end
+
+  out.rewind
+
+  [out, err]
 end
 
 __END__
@@ -87,19 +84,12 @@ form action="/json"
     = json
   input type="submit" value="pp"
 
-  - if defined? prettified_jsons
+  - if defined? out
     h2 Prettified
     textarea cols="80" rows="20"
-      - prettified_jsons.each do |json|
-        = json + "\n"
-
-@@ json_error
-h2 JSON
-form action="/json"
-  textarea name="json" cols="80" rows="20"
-    = json
-  input type="submit" value="pp"
-
-  h2 Error!
-  textarea cols="80" rows="20"
-    = e.message
+      - out.each do |buf|
+        = buf
+  - if defined? err and err
+    h2 Error!
+    textarea cols="80" rows="20"
+      = err.message.force_encoding("UTF-8")
