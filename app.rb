@@ -2,6 +2,7 @@ require 'sinatra'
 require 'sinatra/multi_route'
 require 'sinatra/streaming'
 require 'slim'
+require 'tempfile'
 require 'yajl'
 
 enable :inline_templates
@@ -26,15 +27,23 @@ end
 
 route :get, :post, '/json.json' do
   if request_json
-    stream do |out|
-      begin
-        prettify_json(request_json).each do |json|
-          out.puts json
-        end
-      rescue => e
-        out.puts e.message
+    tempfile = Tempfile.open(['tmp', '.json'])
+
+    error_occured = false
+
+    begin
+      prettify_json(request_json).each do |json|
+        tempfile.puts json
       end
+    rescue => e
+      tempfile.puts e.message
+      error_occured = true
     end
+
+    status 400 if error_occured
+
+    tempfile.rewind
+    response.write tempfile.read
   end
 end
 
