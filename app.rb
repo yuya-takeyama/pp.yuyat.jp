@@ -11,10 +11,17 @@ get '/' do
 end
 
 route :get, :post, '/json' do
-  locals = {json: request_json}
-  locals[:prettified_jsons] = prettify_json(request_json) if request_json
+  begin
+    locals = {json: request_json}
+    locals[:prettified_jsons] = prettify_json(request_json) if request_json
 
-  slim :json, locals: locals
+    slim :json, locals: locals
+  rescue => e
+    status 400
+    locals[:e] = e
+
+    slim :json_error, locals: locals
+  end
 end
 
 route :get, :post, '/json.json' do
@@ -51,6 +58,11 @@ doctype html
 html
   head
     title pp
+    css:
+      textarea {
+        font-family: Osaka-mono, "Osaka-等幅", "ＭＳ ゴシック", monospace;
+        font-size: 14px;
+      }
   body
     h1 pp
     #content
@@ -68,3 +80,14 @@ form action="/json"
     textarea cols="80" rows="20"
       - prettified_jsons.each do |json|
         = json + "\n"
+
+@@ json_error
+h2 JSON
+form action="/json"
+  textarea name="json" cols="80" rows="20"
+    = json
+  input type="submit" value="pp"
+
+  h2 Error!
+  textarea cols="80" rows="20"
+    = e.message
