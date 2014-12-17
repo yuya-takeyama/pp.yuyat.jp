@@ -66,7 +66,7 @@ __END__
 doctype html
 html
   head
-    title pp
+    title pp JSON
     css:
       textarea {
         font-family: Osaka-mono, "Osaka-等幅", "ＭＳ ゴシック", monospace;
