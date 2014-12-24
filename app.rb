@@ -87,7 +87,7 @@ html
 
 @@ json
 h2 JSON
-form action="/json" method="post
+form action="/json" method="post"
   textarea name="json" cols="80" rows="20"
     = json
   input type="submit" value="pp"
