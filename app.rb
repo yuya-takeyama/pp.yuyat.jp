@@ -37,10 +37,18 @@ end
 
 def request_json
   if request.post?
-    request.body
+    if x_www_form_urlencoded?
+      params['json']
+    else
+      request.body
+    end
   else
     params['json']
   end
+end
+
+def x_www_form_urlencoded?
+  request.content_type == 'application/x-www-form-urlencoded'
 end
 
 def prettify_json(json)
@@ -79,7 +87,7 @@ html
 
 @@ json
 h2 JSON
-form action="/json"
+form action="/json" method="post
   textarea name="json" cols="80" rows="20"
     = json
   input type="submit" value="pp"
